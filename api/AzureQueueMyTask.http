@@ -1,0 +1,6 @@
+@AzureQueueMyTask_HostAddress = http://localhost:5190
+
+GET {{AzureQueueMyTask_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
