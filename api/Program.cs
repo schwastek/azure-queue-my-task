@@ -1,4 +1,5 @@
 using Azure.Monitor.OpenTelemetry.AspNetCore;
+using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,7 +12,28 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 // Add OpenTelemetry and configure it to use Azure Monitor.
-builder.Services.AddOpenTelemetry().UseAzureMonitor();
+builder.Services
+    .AddOpenTelemetry()
+    .WithTracing(builder =>
+        builder.AddAspNetCoreInstrumentation((options) =>
+            options.Filter = (httpContext) =>
+            {
+                var path = httpContext.Request.Path.Value ?? string.Empty;
+
+                // Only allow API paths like /api/products, /api/users/1.
+                // Filter out unwanted telemetry — especially HTTP request logs for static files.
+                // Requests to /favicon.ico, /swagger, and other non-API paths will be excluded
+                // from Azure Application Insights to avoid cluttering logs with irrelevant data.
+                if (path.StartsWith("/api/"))
+                {
+                    return true;
+                }
+
+                return false;
+            }
+        )
+    )
+    .UseAzureMonitor();
 
 var app = builder.Build();
 
