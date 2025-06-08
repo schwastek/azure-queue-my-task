@@ -1,4 +1,6 @@
+using Azure.Messaging.ServiceBus;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
+using Microsoft.Extensions.Azure;
 using OpenTelemetry.Trace;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,6 +36,21 @@ builder.Services
         )
     )
     .UseAzureMonitor();
+
+builder.Services.AddAzureClients(clientBuilder =>
+{
+    var queueName = "tasks";
+
+    // Register client
+    clientBuilder.AddServiceBusClient(builder.Configuration["AzureServiceBus:ConnectionString"]);
+
+    // Register sender
+    clientBuilder.AddClient<ServiceBusSender, ServiceBusClientOptions>((_, _, provider) =>
+        provider
+            .GetRequiredService<ServiceBusClient>()
+            .CreateSender(queueName)
+    ).WithName(queueName);
+});
 
 var app = builder.Build();
 
